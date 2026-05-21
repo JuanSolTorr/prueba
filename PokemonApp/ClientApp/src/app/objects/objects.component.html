@@ -1,0 +1,206 @@
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+
+  <!-- Header & Search -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+    <div class="space-y-1">
+      <h1 class="text-3xl font-black tracking-tight text-white">Tienda Pokémon</h1>
+      <p class="text-gray-400 text-sm">Explora pociones, pokéballs, bayas y otros objetos de utilidad.</p>
+    </div>
+
+    <!-- Search Input -->
+    <div class="relative w-full md:w-96 group">
+      <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-pokeYellow transition-colors duration-200">
+        <!-- SVG shopping bag / magnifier -->
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+      <input 
+        type="text" 
+        [(ngModel)]="searchText"
+        (keyup.enter)="search()"
+        placeholder="Buscar objetos..." 
+        class="w-full pl-10 pr-10 py-3 rounded-2xl bg-pokeBlack-light border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-pokeYellow/50 focus:ring-1 focus:ring-pokeYellow/50 transition-all duration-300 shadow-inner"
+      />
+      <button 
+        *ngIf="searchText" 
+        (click)="clearSearch()"
+        class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-500 hover:text-white transition-colors"
+      >
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Category Filters -->
+  <div class="space-y-3" *ngIf="categories.length > 0">
+    <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Filtrar por Categoría</span>
+    <div class="flex flex-wrap gap-2.5 pb-2 overflow-x-auto">
+      <button 
+        *ngFor="let cat of categories" 
+        (click)="selectCategory(cat)"
+        [ngClass]="[
+          selectedCategory === cat ? 'bg-pokeYellow text-pokeBlack font-bold shadow-yellow-glow' : 'bg-pokeBlack-light text-gray-400 border border-white/5 hover:border-white/20 hover:text-white'
+        ]"
+        class="px-3.5 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer"
+      >
+        {{ cat.replace('-', ' ') }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Loader while first loading -->
+  <div *ngIf="isLoading && items.length === 0" class="py-32 flex flex-col items-center justify-center space-y-4">
+    <!-- Spinning Pokéball Loader -->
+    <div class="w-16 h-16 rounded-full border-4 border-pokeBlack bg-white relative overflow-hidden animate-pokeball-spin shadow-lg">
+      <div class="absolute top-0 left-0 w-full h-1/2 bg-pokeRed"></div>
+      <div class="absolute top-1/2 left-0 w-full h-1.5 bg-pokeBlack -translate-y-1/2"></div>
+      <div class="absolute top-1/2 left-1/2 w-5 h-5 rounded-full border-4 border-pokeBlack bg-white -translate-x-1/2 -translate-y-1/2"></div>
+    </div>
+    <span class="text-sm font-semibold tracking-wide text-gray-400">Ordenando las estanterías de la tienda...</span>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!isLoading && items.length === 0" class="py-24 text-center glass-panel rounded-3xl border border-white/5 space-y-4">
+    <div class="w-20 h-20 mx-auto rounded-full bg-pokeYellow/10 border border-pokeYellow/20 flex items-center justify-center text-pokeYellow">
+      <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+      </svg>
+    </div>
+    <div class="space-y-1">
+      <h3 class="text-xl font-bold text-white">No se encontraron objetos</h3>
+      <p class="text-sm text-gray-400">Prueba ajustando el texto o el filtro de categoría.</p>
+    </div>
+    <button (click)="clearSearch(); selectedCategory=''" class="bg-white/5 hover:bg-white/10 text-white font-bold text-xs px-6 py-2.5 rounded-xl border border-white/10 transition-all duration-300">
+      Restablecer filtros
+    </button>
+  </div>
+
+  <!-- Items Grid -->
+  <div *ngIf="items.length > 0" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+    <div 
+      *ngFor="let item of items"
+      (click)="openDetails(item)"
+      class="glass-card rounded-2xl p-5 border border-white/5 cursor-pointer relative overflow-hidden group hover:-translate-y-1.5 hover:shadow-yellow-glow transition-all duration-300 flex items-center gap-4"
+    >
+      <!-- Item Sprite -->
+      <div class="w-16 h-16 bg-black/25 rounded-xl p-2.5 flex items-center justify-center relative overflow-hidden shrink-0">
+        <img 
+          [src]="item.imageUrl" 
+          [alt]="item.name"
+          loading="lazy"
+          class="w-12 h-12 object-contain z-10 transition-transform duration-300 group-hover:scale-125"
+        />
+        <!-- Inner radar ring background -->
+        <div class="absolute inset-0 bg-gradient-to-tr from-pokeYellow/5 to-transparent opacity-30 z-0"></div>
+      </div>
+
+      <!-- Item Info Summary -->
+      <div class="space-y-1 min-w-0 flex-grow">
+        <span class="text-[10px] font-bold text-pokeYellow/80 uppercase tracking-wider block truncate">
+          {{ item.category.replace('-', ' ') }}
+        </span>
+        <h3 class="text-base font-extrabold text-white capitalize truncate group-hover:text-pokeYellow transition-colors duration-200">
+          {{ item.name.replace('-', ' ') }}
+        </h3>
+        <div class="flex items-center gap-1.5 text-sm font-black text-white">
+          <span class="text-pokeYellow font-semibold">₽</span> 
+          <span>{{ item.cost > 0 ? (item.cost | number) : 'Gratis' }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination / Load More -->
+  <div *ngIf="items.length > 0 && items.length < totalCount" class="py-8 flex justify-center">
+    <button 
+      (click)="loadMore()"
+      [disabled]="isLoading"
+      class="bg-pokeYellow hover:bg-pokeYellow-dark text-pokeBlack font-extrabold text-sm px-8 py-3.5 rounded-2xl shadow-lg shadow-pokeYellow/15 hover:shadow-pokeYellow/35 disabled:opacity-50 transition-all duration-300 transform active:scale-95 flex items-center gap-3"
+    >
+      <span *ngIf="isLoading" class="w-4 h-4 border-2 border-pokeBlack border-t-transparent rounded-full animate-spin"></span>
+      {{ isLoading ? 'Cargando...' : 'Ver más Objetos' }}
+    </button>
+  </div>
+
+  <!-- Detail Modal -->
+  <div 
+    *ngIf="isDetailOpen" 
+    [ngClass]="{'opacity-100': isDetailOpen, 'opacity-0 pointer-events-none': !isDetailOpen}"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm transition-opacity duration-300"
+    (click)="closeDetails()"
+  >
+    <div 
+      [ngClass]="{'scale-100 translate-y-0': selectedItem, 'scale-95 translate-y-4': !selectedItem}"
+      class="w-full max-w-md glass-panel border border-pokeYellow/20 rounded-3xl overflow-hidden shadow-2xl relative transition-all duration-300"
+      (click)="$event.stopPropagation()"
+    >
+      
+      <!-- Inside Detail Modal Card -->
+      <div *ngIf="selectedItem" class="relative p-6 md:p-8 space-y-6">
+        
+        <!-- Top accent belt decoration -->
+        <div class="h-2 w-full bg-gradient-to-r from-pokeRed to-pokeYellow absolute top-0 left-0"></div>
+
+        <!-- Close Button -->
+        <button 
+          (click)="closeDetails()"
+          class="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/40 hover:bg-black/60 text-gray-300 hover:text-white border border-white/5 transition-all focus:outline-none"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        <!-- Header Info -->
+        <div class="flex items-start gap-4">
+          <!-- Big Sprite Container -->
+          <div class="w-20 h-20 bg-black/35 rounded-2xl p-3 flex items-center justify-center shrink-0 border border-white/5 relative overflow-hidden">
+            <img [src]="selectedItem.imageUrl" [alt]="selectedItem.name" class="w-14 h-14 object-contain z-10 animate-float" />
+            <div class="absolute inset-0 bg-gradient-to-br from-pokeYellow/10 to-transparent"></div>
+          </div>
+          
+          <div class="space-y-1.5 min-w-0">
+            <span class="bg-pokeYellow/15 border border-pokeYellow/35 text-pokeYellow text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-md tracking-wider inline-block">
+              {{ selectedItem.category.replace('-', ' ') }}
+            </span>
+            <h2 class="text-2xl font-black text-white capitalize tracking-wide truncate">
+              {{ selectedItem.name.replace('-', ' ') }}
+            </h2>
+          </div>
+        </div>
+
+        <!-- Description / Effect -->
+        <div class="space-y-1.5 bg-black/25 rounded-2xl p-4 border border-white/5">
+          <span class="block text-[10px] uppercase font-bold text-gray-500">Efecto / Descripción</span>
+          <p class="text-sm text-gray-300 font-light leading-relaxed leading-relaxed">
+            {{ selectedItem.effect }}
+          </p>
+        </div>
+
+        <!-- Price Panel & Purchase Mock -->
+        <div class="flex items-center justify-between border-t border-white/10 pt-4 mt-2">
+          <div>
+            <span class="block text-[10px] uppercase font-bold text-gray-500">Precio en Tienda</span>
+            <div class="flex items-center gap-1 text-xl font-black text-white">
+              <span class="text-pokeYellow font-semibold">₽</span>
+              <span>{{ selectedItem.cost > 0 ? (selectedItem.cost | number) : 'Gratis' }}</span>
+            </div>
+          </div>
+
+          <button 
+            (click)="closeDetails()"
+            class="bg-pokeYellow hover:bg-pokeYellow-dark text-pokeBlack font-extrabold text-xs px-6 py-3 rounded-xl shadow-md transition-all duration-300 transform active:scale-95"
+          >
+            Añadir a Mochila
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+</div>

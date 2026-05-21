@@ -1,0 +1,492 @@
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
+
+  <!-- Header & Search -->
+  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+    <div class="space-y-1">
+      <h1 class="text-3xl font-black tracking-tight text-white">Pokédex Oficial</h1>
+      <p class="text-gray-400 text-sm">Busca, añade y gestiona los Pokémon de la base de datos local.</p>
+    </div>
+
+    <!-- Search & Add Actions -->
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full md:w-auto">
+      
+      <!-- Add Custom Pokemon Button -->
+      <button 
+        (click)="openCreateModal()" 
+        class="bg-pokeRed hover:bg-pokeRed-dark text-white font-extrabold text-xs px-5 py-3 rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 transform active:scale-95 shrink-0 flex items-center justify-center gap-2 hover:shadow-poke-glow"
+      >
+        <!-- Pokéball addition SVG icon -->
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+        </svg>
+        Registrar Pokémon
+      </button>
+
+      <!-- Search Input -->
+      <div class="relative w-full md:w-80 group">
+        <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400 group-focus-within:text-pokeRed transition-colors duration-200">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <input 
+          type="text" 
+          [(ngModel)]="searchText"
+          (keyup.enter)="search()"
+          placeholder="Buscar por nombre o número..." 
+          class="w-full pl-10 pr-10 py-3 rounded-2xl bg-pokeBlack-light border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-pokeRed/50 focus:ring-1 focus:ring-pokeRed/50 transition-all duration-300 shadow-inner"
+        />
+        <button 
+          *ngIf="searchText" 
+          (click)="clearSearch()"
+          class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-500 hover:text-white transition-colors"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Type Filters -->
+  <div class="space-y-3">
+    <span class="text-xs font-bold uppercase tracking-wider text-gray-400">Filtrar por Tipo</span>
+    <div class="flex flex-wrap gap-2.5 pb-2 overflow-x-auto">
+      <button 
+        *ngFor="let type of pokemonTypes" 
+        (click)="selectType(type)"
+        [ngClass]="[
+          selectedType === type ? 'type-' + type + ' scale-105 ring-2 ring-white/20' : 'bg-pokeBlack-light text-gray-400 border border-white/5 hover:border-white/20 hover:text-white'
+        ]"
+        class="type-badge cursor-pointer px-4 py-1.5 transition-all duration-200 uppercase text-xs font-bold"
+      >
+        {{ type }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Loader while first loading -->
+  <div *ngIf="isLoading && pokemons.length === 0" class="py-32 flex flex-col items-center justify-center space-y-4">
+    <!-- Bouncing CSS Pokéball Loader -->
+    <div class="w-16 h-16 rounded-full border-4 border-pokeBlack bg-white relative overflow-hidden animate-pokeball-spin animate-bounce shadow-lg">
+      <div class="absolute top-0 left-0 w-full h-1/2 bg-pokeRed"></div>
+      <div class="absolute top-1/2 left-0 w-full h-1.5 bg-pokeBlack -translate-y-1/2"></div>
+      <div class="absolute top-1/2 left-1/2 w-5 h-5 rounded-full border-4 border-pokeBlack bg-white -translate-x-1/2 -translate-y-1/2"></div>
+    </div>
+    <span class="text-sm font-semibold tracking-wide text-gray-400">Consultando la Pokédex local persistente...</span>
+  </div>
+
+  <!-- Empty State -->
+  <div *ngIf="!isLoading && pokemons.length === 0" class="py-24 text-center glass-panel rounded-3xl border border-white/5 space-y-4">
+    <div class="w-20 h-20 mx-auto rounded-full bg-pokeRed/10 border border-pokeRed/20 flex items-center justify-center text-pokeRed">
+      <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    </div>
+    <div class="space-y-1">
+      <h3 class="text-xl font-bold text-white">No se encontraron Pokémon</h3>
+      <p class="text-sm text-gray-400">Prueba registrando tu propio Pokémon personalizado.</p>
+    </div>
+    <button (click)="clearSearch(); selectedType=''" class="bg-white/5 hover:bg-white/10 text-white font-bold text-xs px-6 py-2.5 rounded-xl border border-white/10 transition-all duration-300">
+      Restablecer filtros
+    </button>
+  </div>
+
+  <!-- Pokemon Grid -->
+  <div *ngIf="pokemons.length > 0" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+    <div 
+      *ngFor="let pokemon of pokemons"
+      (click)="openDetails(pokemon.id)"
+      class="glass-card rounded-2xl p-5 border border-white/5 cursor-pointer relative overflow-hidden group hover:-translate-y-2 hover:shadow-poke-glow transition-all duration-300"
+    >
+      <!-- Background Pokéball design inside card -->
+      <div class="absolute -right-6 -bottom-6 w-28 h-28 border-[6px] border-white/[0.02] rounded-full z-0 pointer-events-none flex items-center justify-center">
+        <div class="w-full h-1.5 bg-white/[0.02]"></div>
+        <div class="absolute w-8 h-8 rounded-full border-[6px] border-white/[0.02] bg-pokeBlack"></div>
+      </div>
+
+      <!-- Pokemon Image -->
+      <div class="relative w-full aspect-square bg-black/10 rounded-xl mb-4 p-4 flex items-center justify-center overflow-hidden">
+        <img 
+          [src]="pokemon.imageUrl" 
+          [alt]="pokemon.name"
+          loading="lazy"
+          class="w-full h-full object-contain z-10 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-2"
+        />
+      </div>
+
+      <!-- Pokemon Details -->
+      <div class="space-y-2 relative z-10">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold text-gray-500">#{{ pokemon.id | number:'3.0-0' }}</span>
+          <div class="flex gap-1">
+            <span 
+              *ngFor="let t of pokemon.types" 
+              [ngClass]="'type-' + t"
+              class="w-2.5 h-2.5 rounded-full" 
+              [title]="t"
+            ></span>
+          </div>
+        </div>
+        <h3 class="text-base font-bold text-white capitalize group-hover:text-pokeYellow transition-colors duration-200 truncate">
+          {{ pokemon.name }}
+        </h3>
+        
+        <!-- Type Badges -->
+        <div class="flex gap-1.5 pt-1">
+          <span 
+            *ngFor="let t of pokemon.types" 
+            [ngClass]="'type-' + t"
+            class="px-2 py-0.5 rounded-md text-[9px] font-extrabold uppercase text-white shadow-sm"
+          >
+            {{ t }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pagination / Load More -->
+  <div *ngIf="pokemons.length > 0 && pokemons.length < totalCount" class="py-8 flex justify-center">
+    <button 
+      (click)="loadMore()"
+      [disabled]="isLoading"
+      class="bg-pokeRed hover:bg-pokeRed-dark text-white font-bold text-sm px-8 py-3.5 rounded-2xl shadow-lg shadow-pokeRed/25 hover:shadow-pokeRed/45 disabled:opacity-50 transition-all duration-300 transform active:scale-95 flex items-center gap-3"
+    >
+      <span *ngIf="isLoading" class="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+      {{ isLoading ? 'Cargando...' : 'Cargar más Pokémon' }}
+    </button>
+  </div>
+
+  <!-- Detail Modal -->
+  <div 
+    *ngIf="isDetailOpen" 
+    [ngClass]="{'opacity-100': isDetailOpen, 'opacity-0 pointer-events-none': !isDetailOpen}"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm transition-opacity duration-300"
+    (click)="closeDetails()"
+  >
+    <div 
+      [ngClass]="{'scale-100 translate-y-0': !isLoadingDetails && selectedPokemon, 'scale-95 translate-y-4': isLoadingDetails || !selectedPokemon}"
+      class="w-full max-w-2xl glass-panel border border-white/10 rounded-3xl overflow-hidden shadow-2xl relative transition-all duration-300 animate-beam"
+      (click)="$event.stopPropagation()"
+    >
+      
+      <!-- Loading details state -->
+      <div *ngIf="isLoadingDetails" class="py-32 flex flex-col items-center justify-center space-y-4">
+        <div class="w-12 h-12 rounded-full border-4 border-pokeBlack bg-white relative overflow-hidden animate-pokeball-spin">
+          <div class="absolute top-0 left-0 w-full h-1/2 bg-pokeRed"></div>
+          <div class="absolute top-1/2 left-0 w-full h-1 bg-pokeBlack -translate-y-1/2"></div>
+          <div class="absolute top-1/2 left-1/2 w-4 h-4 rounded-full border-4 border-pokeBlack bg-white -translate-x-1/2 -translate-y-1/2"></div>
+        </div>
+        <span class="text-xs font-semibold text-gray-400">Consultando datos del Pokémon...</span>
+      </div>
+
+      <!-- Main details content -->
+      <div *ngIf="!isLoadingDetails && selectedPokemon" class="relative">
+        
+        <!-- Header background matching the Pokemon's primary type -->
+        <div 
+          [ngClass]="'type-' + selectedPokemon.types[0]" 
+          class="h-32 w-full absolute top-0 left-0 z-0 opacity-20 filter blur-md"
+        ></div>
+
+        <!-- Close Button -->
+        <button 
+          (click)="closeDetails()"
+          class="absolute top-4 right-4 z-20 p-2.5 rounded-full bg-black/40 hover:bg-black/60 text-gray-300 hover:text-white border border-white/5 transition-all focus:outline-none"
+        >
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+
+        <!-- Main Body -->
+        <div class="p-6 md:p-8 space-y-6 relative z-10">
+          
+          <!-- Basic Info Header -->
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+              <span class="text-lg font-black text-gray-500">#{{ selectedPokemon.id | number:'3.0-0' }}</span>
+              <h2 class="text-3xl font-black text-white capitalize tracking-wide">{{ selectedPokemon.name }}</h2>
+            </div>
+            
+            <div class="flex gap-2">
+              <span 
+                *ngFor="let t of selectedPokemon.types"
+                [ngClass]="'type-' + t" 
+                class="type-badge shadow-md"
+              >
+                {{ t }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Content Grid (Image vs Stats/Attributes) -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            
+            <!-- Left Side: Image & Physical stats -->
+            <div class="flex flex-col items-center space-y-4">
+              <div class="relative w-full aspect-square max-w-[240px] bg-black/20 rounded-2xl p-6 flex items-center justify-center shadow-inner">
+                <img 
+                  [src]="selectedPokemon.imageUrl" 
+                  [alt]="selectedPokemon.name"
+                  class="w-full h-full object-contain drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] animate-float"
+                />
+              </div>
+
+              <!-- Height & Weight & Abilities Row -->
+              <div class="grid grid-cols-2 gap-3 w-full">
+                <!-- Altura -->
+                <div class="bg-black/20 rounded-xl p-3 text-center border border-white/5">
+                  <span class="block text-[10px] uppercase font-bold text-gray-500">Altura</span>
+                  <span class="text-sm font-bold text-white">{{ selectedPokemon.height }} m</span>
+                </div>
+                <!-- Peso -->
+                <div class="bg-black/20 rounded-xl p-3 text-center border border-white/5">
+                  <span class="block text-[10px] uppercase font-bold text-gray-500">Peso</span>
+                  <span class="text-sm font-bold text-white">{{ selectedPokemon.weight }} kg</span>
+                </div>
+              </div>
+
+              <!-- Abilities -->
+              <div class="w-full bg-black/20 rounded-xl p-4 border border-white/5">
+                <span class="block text-[10px] uppercase font-bold text-gray-500 mb-2">Habilidades</span>
+                <div class="flex flex-wrap gap-1.5">
+                  <span 
+                    *ngFor="let ability of selectedPokemon.abilities" 
+                    class="bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-gray-300 capitalize font-medium"
+                  >
+                    {{ ability.replace('-', ' ') }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Side: Stats & Description -->
+            <div class="space-y-5">
+              
+              <!-- Description -->
+              <div class="space-y-1.5">
+                <span class="block text-[10px] uppercase font-bold text-gray-500">Descripción</span>
+                <p class="text-sm text-gray-300 font-light leading-relaxed italic">
+                  "{{ selectedPokemon.description }}"
+                </p>
+              </div>
+
+              <!-- Stats Bars -->
+              <div class="space-y-3 pt-2">
+                <span class="block text-[10px] uppercase font-bold text-gray-500 border-b border-white/10 pb-1.5">Estadísticas Base</span>
+                
+                <div class="space-y-2.5">
+                  <div *ngFor="let stat of selectedPokemon.stats | keyvalue" class="space-y-1">
+                    <div class="flex justify-between text-[11px] font-semibold">
+                      <span class="text-gray-400 capitalize">{{ getStatLabel(stat.key) }}</span>
+                      <span class="text-white">{{ stat.value }}</span>
+                    </div>
+                    <div class="h-2 bg-black/40 rounded-full overflow-hidden">
+                      <div 
+                        [style.width]="getStatPercentage(stat.value)"
+                        [ngClass]="getStatColor(stat.key)"
+                        class="h-full rounded-full transition-all duration-1000 ease-out"
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+
+          <!-- Bottom bar: Delete Action -->
+          <div class="border-t border-white/10 pt-4 flex justify-end">
+            <button 
+              (click)="deletePokemon(selectedPokemon.id)"
+              class="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-5 py-2.5 rounded-xl border border-red-500/20 transition-all duration-300 flex items-center gap-2"
+            >
+              <!-- Trash icon -->
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+              Liberar Pokémon
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Create Pokemon Modal Form -->
+  <div 
+    *ngIf="isCreateOpen"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm transition-opacity duration-300"
+    (click)="closeCreateModal()"
+  >
+    <div 
+      class="w-full max-w-lg glass-panel border border-pokeRed/20 rounded-3xl overflow-hidden shadow-2xl relative transition-all duration-300 animate-beam"
+      (click)="$event.stopPropagation()"
+    >
+      
+      <!-- Top header line decoration -->
+      <div class="h-2 w-full bg-pokeRed absolute top-0 left-0"></div>
+
+      <!-- Close Button -->
+      <button 
+        (click)="closeCreateModal()"
+        class="absolute top-4 right-4 z-20 p-2 rounded-full bg-black/40 hover:bg-black/60 text-gray-300 hover:text-white border border-white/5 transition-all focus:outline-none"
+      >
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+
+      <!-- Main Form -->
+      <div class="p-6 md:p-8 space-y-6">
+        <div class="space-y-1">
+          <h2 class="text-2xl font-black text-white">Registrar Nuevo Pokémon</h2>
+          <p class="text-gray-400 text-xs">Crea un registro de Pokémon personalizado. Se guardará permanentemente en el archivo JSON.</p>
+        </div>
+
+        <form (ngSubmit)="submitCreate()" class="space-y-4 text-sm">
+          <!-- Name -->
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-gray-400 uppercase">Nombre</label>
+            <input 
+              type="text" 
+              name="name"
+              [(ngModel)]="newPokemon.name"
+              placeholder="Ej. Pikablu" 
+              required
+              class="w-full px-4 py-2.5 rounded-xl bg-pokeBlack border border-white/10 text-white focus:outline-none focus:border-pokeRed/50"
+            />
+          </div>
+
+          <!-- Types selection -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-gray-400 uppercase">Tipo Principal</label>
+              <select 
+                name="primaryType"
+                [(ngModel)]="newPokemon.primaryType"
+                class="w-full px-4 py-2.5 rounded-xl bg-pokeBlack border border-white/10 text-white focus:outline-none focus:border-pokeRed/50"
+              >
+                <option *ngFor="let type of pokemonTypes" [value]="type">{{ type | uppercase }}</option>
+              </select>
+            </div>
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-gray-400 uppercase">Tipo Secundario (Opcional)</label>
+              <select 
+                name="secondaryType"
+                [(ngModel)]="newPokemon.secondaryType"
+                class="w-full px-4 py-2.5 rounded-xl bg-pokeBlack border border-white/10 text-white focus:outline-none focus:border-pokeRed/50"
+              >
+                <option value="">Ninguno</option>
+                <option *ngFor="let type of pokemonTypes" [value]="type">{{ type | uppercase }}</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Height & Weight -->
+          <div class="grid grid-cols-2 gap-4">
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-gray-400 uppercase">Altura (m)</label>
+              <input 
+                type="number" 
+                name="height"
+                step="0.1"
+                min="0.1"
+                [(ngModel)]="newPokemon.height"
+                class="w-full px-4 py-2.5 rounded-xl bg-pokeBlack border border-white/10 text-white focus:outline-none focus:border-pokeRed/50"
+              />
+            </div>
+            <div class="space-y-1">
+              <label class="text-xs font-bold text-gray-400 uppercase">Peso (kg)</label>
+              <input 
+                type="number" 
+                name="weight"
+                step="0.1"
+                min="0.1"
+                [(ngModel)]="newPokemon.weight"
+                class="w-full px-4 py-2.5 rounded-xl bg-pokeBlack border border-white/10 text-white focus:outline-none focus:border-pokeRed/50"
+              />
+            </div>
+          </div>
+
+          <!-- HP & Attack & Defense & Speed -->
+          <div class="space-y-2">
+            <label class="text-xs font-bold text-gray-400 uppercase block mb-1">Estadísticas Base (1 - 160)</label>
+            <div class="grid grid-cols-4 gap-2">
+              <div class="space-y-1">
+                <span class="text-[10px] text-gray-500 font-bold block text-center uppercase">HP</span>
+                <input type="number" name="hp" min="1" max="250" [(ngModel)]="newPokemon.hp" class="w-full py-2 text-center rounded-xl bg-pokeBlack border border-white/10 text-white" />
+              </div>
+              <div class="space-y-1">
+                <span class="text-[10px] text-gray-500 font-bold block text-center uppercase">Ataque</span>
+                <input type="number" name="attack" min="1" max="250" [(ngModel)]="newPokemon.attack" class="w-full py-2 text-center rounded-xl bg-pokeBlack border border-white/10 text-white" />
+              </div>
+              <div class="space-y-1">
+                <span class="text-[10px] text-gray-500 font-bold block text-center uppercase">Defensa</span>
+                <input type="number" name="defense" min="1" max="250" [(ngModel)]="newPokemon.defense" class="w-full py-2 text-center rounded-xl bg-pokeBlack border border-white/10 text-white" />
+              </div>
+              <div class="space-y-1">
+                <span class="text-[10px] text-gray-500 font-bold block text-center uppercase">Velocidad</span>
+                <input type="number" name="speed" min="1" max="250" [(ngModel)]="newPokemon.speed" class="w-full py-2 text-center rounded-xl bg-pokeBlack border border-white/10 text-white" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Ability -->
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-gray-400 uppercase">Habilidad Especial</label>
+            <input 
+              type="text" 
+              name="ability"
+              [(ngModel)]="newPokemon.ability"
+              placeholder="Ej. Adaptabilidad" 
+              class="w-full px-4 py-2.5 rounded-xl bg-pokeBlack border border-white/10 text-white focus:outline-none focus:border-pokeRed/50"
+            />
+          </div>
+
+          <!-- Description -->
+          <div class="space-y-1">
+            <label class="text-xs font-bold text-gray-400 uppercase">Descripción</label>
+            <textarea 
+              name="description"
+              [(ngModel)]="newPokemon.description"
+              rows="2"
+              placeholder="Introduce la entrada de la Pokédex..." 
+              class="w-full px-4 py-2 rounded-xl bg-pokeBlack border border-white/10 text-white focus:outline-none focus:border-pokeRed/50 resize-none"
+            ></textarea>
+          </div>
+
+          <!-- Submit / Cancel -->
+          <div class="flex items-center justify-end gap-3 pt-3">
+            <button 
+              type="button" 
+              (click)="closeCreateModal()"
+              class="bg-white/5 hover:bg-white/10 text-white font-bold text-xs px-5 py-2.5 rounded-xl border border-white/10 transition-all duration-300"
+            >
+              Cancelar
+            </button>
+            <button 
+              type="submit"
+              [disabled]="isSaving"
+              class="bg-pokeRed hover:bg-pokeRed-dark text-white font-bold text-xs px-6 py-2.5 rounded-xl border border-pokeRed-dark/20 shadow-md hover:shadow-lg disabled:opacity-50 transition-all duration-300 flex items-center gap-2"
+            >
+              <span *ngIf="isSaving" class="w-3.5 h-3.5 border border-white border-t-transparent rounded-full animate-spin"></span>
+              Registrar
+            </button>
+          </div>
+
+        </form>
+      </div>
+
+    </div>
+  </div>
+
+</div>
