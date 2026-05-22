@@ -132,5 +132,8 @@
       }
     }
   },
-  "defaultProject": "PokemonApp"
+  "defaultProject": "PokemonApp",
+  "cli": {
+    "analytics": "5ad1762a-db58-4fe6-a37d-9b704b4e5d6b"
+  }
 }

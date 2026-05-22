@@ -1,0 +1,10 @@
+{
+  "name": "pokemonapp-root",
+  "private": true,
+  "scripts": {
+    "dev": "dotnet run --project PokemonApp.csproj",
+    "start": "dotnet run --project PokemonApp.csproj",
+    "build": "npm --prefix ClientApp run build",
+    "test": "npm --prefix ClientApp run test"
+  }
+}

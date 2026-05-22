@@ -9,7 +9,7 @@ const PROXY_CONFIG = [
       "/weatherforecast",
       "/api",
    ],
-    proxyTimeout: 10000,
+    proxyTimeout: 120000,
     target: target,
     secure: false,
     headers: {

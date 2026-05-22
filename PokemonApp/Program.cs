@@ -19,24 +19,25 @@ builder.Services.AddScoped<IItemService, ItemService>();
 
 var app = builder.Build();
 
-// Seed/Initialize the Database on application startup
-using (var scope = app.Services.CreateScope())
+// Seed/Initialize the Database in the background so the API can start responding immediately.
+_ = Task.Run(async () =>
 {
+    using var scope = app.Services.CreateScope();
     var services = scope.ServiceProvider;
+
     try
     {
         var dbContext = services.GetRequiredService<JsonDatabaseContext>();
         var httpClientFactory = services.GetRequiredService<IHttpClientFactory>();
         var client = httpClientFactory.CreateClient();
-        
-        // Wait synchronously to ensure seeding is done before backend starts receiving requests
-        dbContext.InitializeAsync(client).GetAwaiter().GetResult();
+
+        await dbContext.InitializeAsync(client);
     }
     catch (Exception ex)
     {
         Console.WriteLine($"An error occurred during database initialization: {ex.Message}");
     }
-}
+});
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
